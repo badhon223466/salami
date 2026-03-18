@@ -1,0 +1,78 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Private user information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "Profile": {
+      "title": "Profile",
+      "description": "Public profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "username": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "bio": { "type": "string" },
+        "totalSalami": { "type": "number" },
+        "verifiedSalami": { "type": "number" },
+        "pendingSalami": { "type": "number" },
+        "viewsCount": { "type": "number" }
+      },
+      "required": ["uid", "username"]
+    },
+    "MFSAccount": {
+      "title": "MFS Account",
+      "description": "Mobile Financial Service account (bKash, Nagad, etc.)",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Owner UID" },
+        "type": { "type": "string", "enum": ["bkash", "nagad", "rocket"] },
+        "number": { "type": "string" },
+        "isPrimary": { "type": "boolean" }
+      },
+      "required": ["uid", "type", "number"]
+    },
+    "Salami": {
+      "title": "Salami",
+      "description": "A salami transaction",
+      "type": "object",
+      "properties": {
+        "receiverUid": { "type": "string" },
+        "senderName": { "type": "string" },
+        "amount": { "type": "number" },
+        "message": { "type": "string" },
+        "gateway": { "type": "string", "enum": ["bkash", "nagad", "rocket"] },
+        "trxId": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "verified", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["receiverUid", "amount", "gateway", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Private user information"
+    },
+    "/profiles/{username}": {
+      "schema": "Profile",
+      "description": "Public profile information"
+    },
+    "/users/{userId}/mfsAccounts/{accountId}": {
+      "schema": "MFSAccount",
+      "description": "User's payment methods"
+    },
+    "/salamis/{salamiId}": {
+      "schema": "Salami",
+      "description": "All salami transactions"
+    }
+  }
+}

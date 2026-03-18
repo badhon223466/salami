@@ -1,0 +1,146 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: userId (UID)
+    // Fields:
+    //   - uid: string (required)
+    //   - email: string (required)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: profiles
+    // Document ID: username (string)
+    // Fields:
+    //   - uid: string (required)
+    //   - username: string (required)
+    //   - displayName: string
+    //   - photoURL: string
+    //   - bio: string
+    //   - totalSalami: number
+    //   - verifiedSalami: number
+    //   - pendingSalami: number
+    //   - viewsCount: number
+    //
+    // Collection: users/{userId}/mfsAccounts
+    // Document ID: accountId
+    // Fields:
+    //   - uid: string (required)
+    //   - type: string (bkash, nagad, rocket)
+    //   - number: string
+    //   - isPrimary: bool
+    //
+    // Collection: salamis
+    // Document ID: auto-generated
+    // Fields:
+    //   - receiverUid: string (required)
+    //   - senderName: string
+    //   - amount: number (required)
+    //   - message: string
+    //   - gateway: string (bkash, nagad, rocket)
+    //   - trxId: string
+    //   - status: string (pending, verified, rejected)
+    //   - createdAt: timestamp
+    //
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidStatus(status) {
+      return status in ['pending', 'verified', 'rejected'];
+    }
+
+    function isValidGateway(gateway) {
+      return gateway in ['bkash', 'nagad', 'rocket'];
+    }
+
+    // Domain Validators
+    function isValidUser(data) {
+      return hasRequiredFields(['uid', 'email', 'createdAt']) &&
+             data.uid == request.auth.uid &&
+             isValidEmail(data.email);
+    }
+
+    function isValidProfile(data) {
+      return hasRequiredFields(['uid', 'username']) &&
+             data.username.size() >= 3 && data.username.size() <= 20 &&
+             (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 50)) &&
+             (!('bio' in data) || (data.bio is string && data.bio.size() <= 200)) &&
+             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 500));
+    }
+
+    function isValidMFSAccount(data) {
+      return hasRequiredFields(['uid', 'type', 'number']) &&
+             isValidGateway(data.type) &&
+             data.number is string && data.number.size() >= 10 && data.number.size() <= 15;
+    }
+
+    function isValidSalami(data) {
+      return hasRequiredFields(['receiverUid', 'amount', 'gateway', 'status']) &&
+             data.amount is number && data.amount > 0 &&
+             isValidGateway(data.gateway) &&
+             isValidStatus(data.status) &&
+             (!('senderName' in data) || (data.senderName is string && data.senderName.size() <= 50)) &&
+             (!('message' in data) || (data.message is string && data.message.size() <= 200)) &&
+             (!('trxId' in data) || (data.trxId is string && data.trxId.size() <= 50));
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (request.auth.token.email == "mdbadhon7734@gmail.com" && request.auth.token.email_verified == true);
+    }
+
+    // Rules
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if (isOwner(userId) || isAdmin()) && isValidUser(request.resource.data);
+    }
+
+    match /profiles/{username} {
+      allow read: if true;
+      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid && isValidProfile(request.resource.data);
+      allow update: if (isAuthenticated() && (resource.data.uid == request.auth.uid || isAdmin()) && isValidProfile(request.resource.data)) ||
+                    (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pendingSalami']) && 
+                     request.resource.data.pendingSalami is number && 
+                     request.resource.data.pendingSalami > resource.data.pendingSalami) ||
+                    (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewsCount']) && 
+                     request.resource.data.viewsCount is number && 
+                     request.resource.data.viewsCount == resource.data.viewsCount + 1);
+    }
+
+    match /users/{userId}/mfsAccounts/{accountId} {
+      allow read: if true;
+      allow create, update: if (isOwner(userId) || isAdmin()) && isValidMFSAccount(request.resource.data);
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+
+    match /salamis/{salamiId} {
+      allow create: if isValidSalami(request.resource.data) && request.resource.data.status == 'pending';
+      allow read: if isAuthenticated() && (resource.data.receiverUid == request.auth.uid || isAdmin());
+      allow update: if isAuthenticated() && (resource.data.receiverUid == request.auth.uid || isAdmin()) && isValidSalami(request.resource.data);
+    }
+  }
+}
