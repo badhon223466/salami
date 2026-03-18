@@ -109,7 +109,7 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() &&
-        (request.auth.token.email == "mdbadhon7734@gmail.com" && request.auth.token.email_verified == true);
+        (request.auth.token.email == "badhon223466@gmail.com");
     }
 
     // Rules

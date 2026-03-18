@@ -28,7 +28,7 @@ const AdminPanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'users' | 'transactions'>('users');
   const [searchTerm, setSearchTerm] = useState('');
 
-  const isAdmin = auth.currentUser?.email === 'mdbadhon7734@gmail.com';
+  const isAdmin = auth.currentUser?.email === 'badhon223466@gmail.com';
 
   useEffect(() => {
     if (!isAdmin) return;

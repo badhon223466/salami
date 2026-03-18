@@ -75,7 +75,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     };
   }, []);
 
-  const isAdmin = user?.email === 'mdbadhon7734@gmail.com';
+  const isAdmin = user?.email === 'badhon223466@gmail.com';
 
   if (loading && !user) return (
     <div className="min-h-screen flex items-center justify-center bg-background">
