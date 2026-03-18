@@ -54,17 +54,38 @@ const PublicProfile: React.FC = () => {
   const [success, setSuccess] = useState(false);
   const [copiedNumber, setCopiedNumber] = useState<string | null>(null);
 
-  const [isMusicPlaying, setIsMusicPlaying] = useState(true);
+  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
 
   useEffect(() => {
     const audio = document.getElementById('bg-music') as HTMLAudioElement;
     if (audio) {
       audio.volume = 0.4;
-      const playAudio = () => {
-        audio.play().catch(e => console.log("Autoplay blocked:", e));
-        document.removeEventListener('click', playAudio);
+      
+      const attemptPlay = () => {
+        audio.play()
+          .then(() => {
+            setIsMusicPlaying(true);
+            removeListeners();
+          })
+          .catch(e => {
+            console.log("Autoplay still blocked or failed:", e);
+          });
       };
-      document.addEventListener('click', playAudio);
+
+      const removeListeners = () => {
+        document.removeEventListener('click', attemptPlay);
+        document.removeEventListener('touchstart', attemptPlay);
+        document.removeEventListener('keydown', attemptPlay);
+      };
+
+      document.addEventListener('click', attemptPlay);
+      document.addEventListener('touchstart', attemptPlay);
+      document.addEventListener('keydown', attemptPlay);
+
+      // Try playing immediately (might work if user already interacted with the site elsewhere)
+      attemptPlay();
+
+      return () => removeListeners();
     }
   }, []);
 
@@ -685,6 +706,7 @@ const PublicProfile: React.FC = () => {
         src="https://xn--f6beex4abi.xn--45bl4db.xn--54b7fta0cc/assets/audios/1.mp3" 
         autoPlay 
         loop 
+        preload="auto"
       />
 
       {/* Music Control */}
