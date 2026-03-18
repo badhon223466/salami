@@ -25,7 +25,9 @@ import {
   QrCode,
   AlertCircle,
   Send,
-  Loader2
+  Loader2,
+  Moon,
+  Star
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format } from 'date-fns';
@@ -184,7 +186,7 @@ const Dashboard: React.FC = () => {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'সালামির পাতা',
+          title: 'Eid Salami',
           text: `${profile.displayName}-কে সালামি পাঠাতে এই লিঙ্কে ক্লিক করুন:`,
           url: profileUrl,
         });
@@ -239,13 +241,14 @@ const Dashboard: React.FC = () => {
   );
 
   return (
-    <div className="space-y-10 max-w-7xl mx-auto pb-20">
-      {/* Top Profile Card */}
-      <div className="glass-card p-8 md:p-12 relative overflow-hidden group border-white/10">
-        <div className="glow-primary -top-20 -left-20 opacity-20 group-hover:opacity-30 transition-opacity" />
-        <div className="glow-secondary -bottom-20 -right-20 opacity-20 group-hover:opacity-30 transition-opacity" />
-        
-        <div className="flex flex-col md:flex-row items-center gap-10 relative z-10">
+    <div className="min-h-screen bg-slate-950 pb-20">
+      <div className="max-w-7xl mx-auto px-6 pt-10 relative z-10 space-y-10">
+        {/* Top Profile Card */}
+        <div className="glass-card p-8 md:p-12 relative overflow-hidden group border-white/10">
+          <div className="glow-primary -top-20 -left-20 opacity-20 group-hover:opacity-30 transition-opacity" />
+          <div className="glow-secondary -bottom-20 -right-20 opacity-20 group-hover:opacity-30 transition-opacity" />
+          
+          <div className="flex flex-col md:flex-row items-center gap-10 relative z-10">
           <div className="relative">
             <div className="w-32 h-32 md:w-40 md:h-40 rounded-[40px] bg-gradient-to-br from-primary to-secondary p-1 shadow-2xl shadow-primary/30">
               <img 
@@ -375,7 +378,7 @@ const Dashboard: React.FC = () => {
           <div className="glass-card p-8 text-center space-y-6">
             <h3 className="text-xl font-black text-white tracking-tight">আপনার QR কোড</h3>
             <div className="bg-white p-6 rounded-[32px] inline-block shadow-2xl shadow-primary/20">
-              <QRCodeSVG value={profileUrl} size={180} />
+              <QRCodeSVG value={profileUrl} size={200} />
             </div>
             <p className="text-slate-500 text-sm font-medium px-4">
               বন্ধুদের এই QR কোডটি স্ক্যান করতে বলুন সরাসরি আপনার প্রোফাইলে যেতে।
@@ -618,6 +621,7 @@ const Dashboard: React.FC = () => {
       </div>
     </div>
   </div>
+</div>
   );
 };
 

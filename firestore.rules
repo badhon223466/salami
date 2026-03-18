@@ -109,7 +109,7 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() &&
-        (request.auth.token.email == "badhon223466@gmail.com");
+        (request.auth.token.email == "mdbadhon7734@gmail.com");
     }
 
     // Rules
@@ -139,8 +139,18 @@ service cloud.firestore {
 
     match /salamis/{salamiId} {
       allow create: if isValidSalami(request.resource.data) && request.resource.data.status == 'pending';
-      allow read: if isAuthenticated() && (resource.data.receiverUid == request.auth.uid || isAdmin());
+      allow read: if (resource.data.status == 'verified') || (isAuthenticated() && (resource.data.receiverUid == request.auth.uid || isAdmin()));
       allow update: if isAuthenticated() && (resource.data.receiverUid == request.auth.uid || isAdmin()) && isValidSalami(request.resource.data);
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /test/connection {
+      allow read: if true;
     }
   }
 }

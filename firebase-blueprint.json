@@ -55,6 +55,19 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["receiverUid", "amount", "gateway", "status"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "A system-wide notification or notice",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string", "enum": ["info", "warning", "success", "error"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["title", "message", "type", "createdAt"]
     }
   },
   "firestore": {
@@ -73,6 +86,10 @@
     "/salamis/{salamiId}": {
       "schema": "Salami",
       "description": "All salami transactions"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "System-wide notifications"
     }
   }
 }

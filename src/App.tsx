@@ -33,6 +33,7 @@ import { format } from 'date-fns';
 import { cn } from './utils';
 
 // --- Components ---
+import Home from './components/Home';
 import Dashboard from './components/Dashboard';
 import ProfileSettings from './components/ProfileSettings';
 import PublicProfile from './components/PublicProfile';
@@ -43,13 +44,17 @@ import ErrorBoundary from './components/ErrorBoundary';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
   const navigate = useNavigate();
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [notifications, setNotifications] = useState<any[]>([]);
 
   useEffect(() => {
     let unsubProfile: (() => void) | null = null;
+    let unsubNotifs: (() => void) | null = null;
+
     const unsubscribeAuth = onAuthStateChanged(auth, (u) => {
       setUser(u);
       if (u) {
@@ -64,6 +69,17 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           console.error("Profile fetch error:", err);
           setLoading(false);
         });
+
+        // Notifications
+        const qNotifs = query(collection(db, 'notifications'));
+        unsubNotifs = onSnapshot(qNotifs, (snap) => {
+          const sorted = snap.docs
+            .map(doc => ({ id: doc.id, ...doc.data() }))
+            .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          setNotifications(sorted);
+        }, (error) => {
+          console.error("Notifications fetch error:", error);
+        });
       } else {
         setProfile(null);
         setLoading(false);
@@ -72,10 +88,11 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     return () => {
       unsubscribeAuth();
       if (unsubProfile) unsubProfile();
+      if (unsubNotifs) unsubNotifs();
     };
   }, []);
 
-  const isAdmin = user?.email === 'badhon223466@gmail.com';
+  const isAdmin = user?.email === 'mdbadhon7734@gmail.com';
 
   if (loading && !user) return (
     <div className="min-h-screen flex items-center justify-center bg-background">
@@ -106,7 +123,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             </div>
             <div className="flex flex-col">
               <span className="text-2xl font-black bg-gradient-to-r from-white via-white to-slate-500 bg-clip-text text-transparent tracking-tighter">
-                সালামির পাতা
+                Eid Salami
               </span>
               <span className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] -mt-1">Premium SaaS</span>
             </div>
@@ -151,7 +168,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               <Menu size={28} />
             </button>
             <div className="hidden md:flex items-center gap-2 text-slate-500 text-sm font-medium">
-              <span>সালামির পাতা</span>
+              <span>Eid Salami</span>
               <span>/</span>
               <span className="text-white capitalize">{window.location.pathname.split('/').pop() || 'Dashboard'}</span>
             </div>
@@ -167,10 +184,63 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               />
             </div>
             
-            <button className="relative p-2.5 bg-slate-900/50 border border-white/5 rounded-2xl text-slate-400 hover:text-white transition-all hover:scale-110">
-              <Bell size={20} />
-              <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-primary rounded-full border-2 border-slate-950" />
-            </button>
+            <div className="relative">
+              <button 
+                onClick={() => setIsNotifOpen(!isNotifOpen)}
+                className="relative p-2.5 bg-slate-900/50 border border-white/5 rounded-2xl text-slate-400 hover:text-white transition-all hover:scale-110"
+              >
+                <Bell size={20} />
+                {notifications.length > 0 && (
+                  <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-primary rounded-full border-2 border-slate-950" />
+                )}
+              </button>
+
+              <AnimatePresence>
+                {isNotifOpen && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-40" 
+                      onClick={() => setIsNotifOpen(false)} 
+                    />
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      className="absolute right-0 mt-4 w-80 bg-slate-900 border border-white/10 rounded-3xl shadow-2xl z-50 overflow-hidden"
+                    >
+                      <div className="p-6 border-b border-white/5 flex items-center justify-between">
+                        <h3 className="font-bold text-white">নোটিফিকেশন</h3>
+                        <span className="text-[10px] font-black bg-primary/20 text-primary px-2 py-1 rounded-full uppercase tracking-widest">
+                          {notifications.length} টি নতুন
+                        </span>
+                      </div>
+                      <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
+                        {notifications.length > 0 ? (
+                          notifications.map((notif) => (
+                            <div key={notif.id} className="p-5 border-b border-white/5 hover:bg-white/5 transition-colors group">
+                              <div className="flex items-start gap-4">
+                                <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                                  <Bell className="text-primary" size={18} />
+                                </div>
+                                <div>
+                                  <h4 className="text-sm font-bold text-white mb-1">{notif.title}</h4>
+                                  <p className="text-xs text-slate-400 leading-relaxed">{notif.message}</p>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="p-10 text-center">
+                            <Bell className="mx-auto text-slate-700 mb-4 opacity-20" size={40} />
+                            <p className="text-slate-500 text-sm">নতুন কোনো নোটিফিকেশন নেই</p>
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
 
             <div className="flex items-center gap-3 pl-6 border-l border-white/5 group cursor-pointer">
               <div className="text-right hidden sm:block">
@@ -265,10 +335,9 @@ const App: React.FC = () => {
     <ErrorBoundary>
       <Router>
         <Routes>
+          <Route path="/" element={<Home />} />
           <Route path="/u/:username" element={<PublicProfile />} />
           <Route path="/auth" element={<Auth />} />
-          
-          <Route path="/" element={user ? <Navigate to="/dashboard" /> : <Auth />} />
           
           <Route path="/dashboard" element={
             user ? <Layout><Dashboard /></Layout> : <Navigate to="/auth" />

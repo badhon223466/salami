@@ -22,7 +22,9 @@ import {
   Clock,
   Send,
   TrendingUp,
-  X
+  X,
+  Moon,
+  Star
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format } from 'date-fns';
@@ -77,6 +79,10 @@ const PublicProfile: React.FC = () => {
   useEffect(() => {
     if (!username) return;
 
+    let unsubMFS: (() => void) | null = null;
+    let unsubRecent: (() => void) | null = null;
+    let unsubTop: (() => void) | null = null;
+
     const fetchProfile = async () => {
       try {
         const profileRef = doc(db, 'profiles', username.toLowerCase());
@@ -92,7 +98,7 @@ const PublicProfile: React.FC = () => {
           // Fetch MFS
           const mfsPath = `users/${data.uid}/mfsAccounts`;
           const mfsQuery = query(collection(db, mfsPath));
-          onSnapshot(mfsQuery, (snap) => {
+          unsubMFS = onSnapshot(mfsQuery, (snap) => {
             setMfsAccounts(snap.docs.map(d => ({ id: d.id, ...d.data() })));
           }, (error) => {
             handleFirestoreError(error, OperationType.LIST, mfsPath);
@@ -107,7 +113,7 @@ const PublicProfile: React.FC = () => {
             orderBy('createdAt', 'desc'),
             limit(5)
           );
-          onSnapshot(salamiQuery, (snap) => {
+          unsubRecent = onSnapshot(salamiQuery, (snap) => {
             setRecentSalamis(snap.docs.map(d => ({ id: d.id, ...d.data() })));
           }, (error) => {
             handleFirestoreError(error, OperationType.LIST, salamiPath);
@@ -121,7 +127,7 @@ const PublicProfile: React.FC = () => {
             orderBy('amount', 'desc'),
             limit(5)
           );
-          onSnapshot(topSalamiQuery, (snap) => {
+          unsubTop = onSnapshot(topSalamiQuery, (snap) => {
             setTopSalamis(snap.docs.map(d => ({ id: d.id, ...d.data() })));
           }, (error) => {
             handleFirestoreError(error, OperationType.LIST, salamiPath);
@@ -139,6 +145,12 @@ const PublicProfile: React.FC = () => {
     };
 
     fetchProfile();
+
+    return () => {
+      if (unsubMFS) unsubMFS();
+      if (unsubRecent) unsubRecent();
+      if (unsubTop) unsubTop();
+    };
   }, [username]);
 
   const copyToClipboard = (text: string, id: string) => {
@@ -195,7 +207,7 @@ const PublicProfile: React.FC = () => {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'সালামির পাতা',
+          title: 'Eid Salami',
           text: `${profile.displayName}-কে সালামি পাঠাতে এই লিঙ্কে ক্লিক করুন:`,
           url: profileUrl,
         });
@@ -239,6 +251,42 @@ const PublicProfile: React.FC = () => {
       {/* Hero Section */}
       <div className="relative h-64 bg-gradient-to-br from-primary/20 via-slate-900 to-secondary/20 overflow-hidden">
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10" />
+        
+        {/* Animated Eid Icons */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <motion.div 
+            animate={{ 
+              y: [0, -20, 0],
+              rotate: [0, 10, 0],
+              opacity: [0.1, 0.3, 0.1]
+            }}
+            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute top-10 right-10 text-primary/20"
+          >
+            <Moon size={100} fill="currentColor" />
+          </motion.div>
+          <motion.div 
+            animate={{ 
+              scale: [1, 1.2, 1],
+              opacity: [0.1, 0.4, 0.1]
+            }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute top-20 left-20 text-secondary/20"
+          >
+            <Star size={32} fill="currentColor" />
+          </motion.div>
+          <motion.div 
+            animate={{ 
+              scale: [1, 1.5, 1],
+              opacity: [0.1, 0.3, 0.1]
+            }}
+            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+            className="absolute bottom-10 left-1/4 text-primary/10"
+          >
+            <Star size={20} fill="currentColor" />
+          </motion.div>
+        </div>
+
         <div className="absolute inset-0 flex items-center justify-center">
           <motion.div 
             initial={{ scale: 0.8, opacity: 0 }}
@@ -250,20 +298,20 @@ const PublicProfile: React.FC = () => {
             </div>
             <h1 className="text-3xl font-bold text-white mb-1">{profile.displayName}</h1>
             <p className="text-primary font-medium mb-4">@{profile.username}</p>
-            <div className="flex items-center justify-center gap-3">
+            <div className="flex items-center justify-center gap-4 mt-2">
               <button 
                 onClick={shareLink}
-                className="p-2 bg-slate-800/50 hover:bg-slate-800 rounded-lg text-slate-300 hover:text-white transition-all border border-slate-700/50"
+                className="w-14 h-14 bg-primary/20 hover:bg-primary/30 rounded-2xl text-primary flex items-center justify-center transition-all border border-primary/20 shadow-lg shadow-primary/10"
                 title="শেয়ার করুন"
               >
-                <Share2 size={18} />
+                <Share2 size={28} />
               </button>
               <button 
                 onClick={() => setShowQR(true)}
-                className="p-2 bg-slate-800/50 hover:bg-slate-800 rounded-lg text-slate-300 hover:text-white transition-all border border-slate-700/50"
+                className="w-14 h-14 bg-secondary/20 hover:bg-secondary/30 rounded-2xl text-secondary flex items-center justify-center transition-all border border-secondary/20 shadow-lg shadow-secondary/10"
                 title="QR কোড"
               >
-                <QrCode size={18} />
+                <QrCode size={28} />
               </button>
             </div>
           </motion.div>
@@ -293,19 +341,6 @@ const PublicProfile: React.FC = () => {
           {/* Salami Form - First on mobile, Right on desktop */}
           <div className="lg:col-span-2 order-1 lg:order-2 lg:row-span-2">
             <div className="glass-card p-6 sm:p-8 min-h-[500px] flex flex-col">
-              <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 mb-8">
-                <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-                  <AlertCircle size={16} className="text-primary" />
-                  কিভাবে সালামি পাঠাবেন?
-                </h3>
-                <ol className="space-y-3 text-xs text-slate-400 list-decimal list-inside">
-                  <li>যেকোনো একটি পেমেন্ট মেথড সিলেক্ট করুন এবং নম্বরটি কপি করুন।</li>
-                  <li>আপনার পেমেন্ট অ্যাপ থেকে ওই নম্বরে টাকা পাঠান।</li>
-                  <li>টাকা পাঠানোর পর ট্রানজেকশন আইডি (TrxID) সংগ্রহ করুন।</li>
-                  <li>নিচের ফর্মে আপনার নাম, টাকার পরিমাণ এবং TrxID দিয়ে সাবমিট করুন।</li>
-                </ol>
-              </div>
-
               <div className="flex items-center justify-between mb-8">
                 <h2 className="text-2xl font-bold text-white flex items-center gap-3">
                   <Gift className="text-primary" size={28} />
@@ -530,6 +565,20 @@ const PublicProfile: React.FC = () => {
                   </motion.div>
                 )}
               </AnimatePresence>
+
+              <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 mt-12">
+                <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                  <AlertCircle size={16} className="text-primary" />
+                  কিভাবে সালামি পাঠাবেন?
+                </h3>
+                <p className="text-xs text-slate-300 mb-4 font-bold">সালামি পাঠাতে নিচের বাটনে ক্লিক করুন!</p>
+                <ol className="space-y-3 text-xs text-slate-400 list-decimal list-inside">
+                  <li>যেকোনো একটি পেমেন্ট মেথড সিলেক্ট করুন এবং নম্বরটি কপি করুন।</li>
+                  <li>আপনার পেমেন্ট অ্যাপ থেকে ওই নম্বরে টাকা পাঠান।</li>
+                  <li>টাকা পাঠানোর পর ট্রানজেকশন আইডি (TrxID) সংগ্রহ করুন।</li>
+                  <li>নিচের ফর্মে আপনার নাম, টাকার পরিমাণ এবং TrxID দিয়ে সাবমিট করুন।</li>
+                </ol>
+              </div>
             </div>
           </div>
 
@@ -657,7 +706,7 @@ const PublicProfile: React.FC = () => {
       <div className="mt-20 text-center">
         <Link to="/" className="inline-flex items-center gap-2 text-slate-500 hover:text-primary transition-colors">
           <Gift size={16} />
-          <span className="text-sm font-medium">সালামির পাতা দিয়ে নিজের পেজ তৈরি করুন</span>
+          <span className="text-sm font-medium">Eid Salami দিয়ে নিজের পেজ তৈরি করুন</span>
         </Link>
       </div>
     </div>

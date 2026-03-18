@@ -229,7 +229,7 @@ const Auth: React.FC = () => {
           >
             <Gift className="text-white w-10 h-10 sm:w-12 sm:h-12" />
           </motion.div>
-          <h1 className="text-3xl sm:text-4xl font-black text-white mb-2 sm:mb-3 tracking-tighter">সালামির পাতা</h1>
+          <h1 className="text-3xl sm:text-4xl font-black text-white mb-2 sm:mb-3 tracking-tighter">Eid Salami</h1>
           <p className="text-slate-400 text-sm sm:text-base font-medium">আপনার ঈদের সালামি সংগ্রহ করুন ডিজিটাল উপায়ে!</p>
         </div>
 

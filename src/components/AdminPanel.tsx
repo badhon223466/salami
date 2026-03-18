@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { auth, db } from '../firebase';
-import { collection, query, onSnapshot, orderBy, doc, updateDoc, getDocs } from 'firebase/firestore';
+import { collection, query, onSnapshot, orderBy, doc, updateDoc, getDocs, addDoc, deleteDoc } from 'firebase/firestore';
 import { OperationType, handleFirestoreError } from '../firebase';
 import { 
   Users, 
@@ -15,7 +15,8 @@ import {
   Lock,
   Unlock,
   Eye,
-  User
+  User,
+  Bell
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { bn } from 'date-fns/locale';
@@ -25,28 +26,66 @@ const AdminPanel: React.FC = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'users' | 'transactions'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'transactions' | 'notices'>('users');
   const [searchTerm, setSearchTerm] = useState('');
+  const [notices, setNotices] = useState<any[]>([]);
+  const [newNotice, setNewNotice] = useState({ title: '', message: '', type: 'info' });
 
-  const isAdmin = auth.currentUser?.email === 'badhon223466@gmail.com';
+  const isAdmin = auth.currentUser?.email === 'mdbadhon7734@gmail.com';
 
   useEffect(() => {
     if (!isAdmin) return;
 
     const unsubUsers = onSnapshot(collection(db, 'profiles'), (snap) => {
       setUsers(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'profiles');
     });
 
     const unsubTrx = onSnapshot(query(collection(db, 'salamis'), orderBy('createdAt', 'desc')), (snap) => {
       setTransactions(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'salamis');
+    });
+
+    const unsubNotices = onSnapshot(query(collection(db, 'notifications'), orderBy('createdAt', 'desc')), (snap) => {
+      setNotices(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setLoading(false);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'notifications');
       setLoading(false);
     });
 
     return () => {
       unsubUsers();
       unsubTrx();
+      unsubNotices();
     };
   }, [isAdmin]);
+
+  const handleSendNotice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newNotice.title || !newNotice.message) return;
+
+    try {
+      await addDoc(collection(db, 'notifications'), {
+        ...newNotice,
+        createdAt: new Date().toISOString(),
+        createdBy: auth.currentUser?.uid
+      });
+      setNewNotice({ title: '', message: '', type: 'info' });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'notifications');
+    }
+  };
+
+  const handleDeleteNotice = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'notifications', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `notifications/${id}`);
+    }
+  };
 
   const handleVerify = async (id: string, status: 'verified' | 'rejected') => {
     try {
@@ -119,6 +158,20 @@ const AdminPanel: React.FC = () => {
               <span>লেনদেনসমূহ ({transactions.length})</span>
             </div>
           </button>
+          <button 
+            onClick={() => setActiveTab('notices')}
+            className={cn(
+              "px-8 py-3.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 relative overflow-hidden group",
+              activeTab === 'notices' 
+                ? "bg-gradient-to-r from-primary to-purple-600 text-white shadow-lg shadow-primary/25" 
+                : "text-slate-500 hover:text-white hover:bg-white/5"
+            )}
+          >
+            <div className="flex items-center gap-2">
+              <Bell size={16} />
+              <span>নোটিশ ({notices.length})</span>
+            </div>
+          </button>
         </div>
       </div>
 
@@ -158,24 +211,26 @@ const AdminPanel: React.FC = () => {
       <div className="glass-card overflow-hidden border-white/10 shadow-2xl relative">
         <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent pointer-events-none" />
         
-        <div className="p-8 border-b border-white/5 bg-white/[0.02] flex flex-col md:flex-row gap-6 justify-between items-center relative z-10">
-          <div className="relative w-full md:w-96 group">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary transition-colors" size={18} />
-            <input 
-              type="text" 
-              placeholder={activeTab === 'users' ? "নাম বা ইউজারনেম দিয়ে খুঁজুন..." : "TrxID বা প্রেরক দিয়ে খুঁজুন..."}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="input-field pl-14 py-4 bg-slate-950/50 border-white/10 focus:border-primary/50 focus:ring-primary/20"
-            />
+        {activeTab !== 'notices' && (
+          <div className="p-8 border-b border-white/5 bg-white/[0.02] flex flex-col md:flex-row gap-6 justify-between items-center relative z-10">
+            <div className="relative w-full md:w-96 group">
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary transition-colors" size={18} />
+              <input 
+                type="text" 
+                placeholder={activeTab === 'users' ? "নাম বা ইউজারনেম দিয়ে খুঁজুন..." : "TrxID বা প্রেরক দিয়ে খুঁজুন..."}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="input-field pl-14 py-4 bg-slate-950/50 border-white/10 focus:border-primary/50 focus:ring-primary/20"
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <button className="px-6 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-all flex items-center gap-3">
+                <Filter size={16} />
+                ফিল্টার
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <button className="px-6 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-all flex items-center gap-3">
-              <Filter size={16} />
-              ফিল্টার
-            </button>
-          </div>
-        </div>
+        )}
 
         <div className="overflow-x-auto relative z-10">
           {activeTab === 'users' ? (
@@ -231,7 +286,7 @@ const AdminPanel: React.FC = () => {
                 ))}
               </tbody>
             </table>
-          ) : (
+          ) : activeTab === 'transactions' ? (
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-white/[0.02] border-b border-white/5">
@@ -305,6 +360,89 @@ const AdminPanel: React.FC = () => {
                 ))}
               </tbody>
             </table>
+          ) : (
+            <div className="p-8 space-y-12">
+              {/* Notice Form */}
+              <div className="max-w-2xl bg-white/[0.02] border border-white/5 p-8 rounded-[2rem]">
+                <h3 className="text-2xl font-black text-white mb-6 tracking-tight">নতুন নোটিশ পাঠান</h3>
+                <form onSubmit={handleSendNotice} className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">টাইটেল</label>
+                    <input 
+                      type="text" 
+                      value={newNotice.title}
+                      onChange={(e) => setNewNotice({ ...newNotice, title: e.target.value })}
+                      className="input-field py-4"
+                      placeholder="নোটিশের শিরোনাম..."
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">মেসেজ</label>
+                    <textarea 
+                      value={newNotice.message}
+                      onChange={(e) => setNewNotice({ ...newNotice, message: e.target.value })}
+                      className="input-field py-4 min-h-[120px]"
+                      placeholder="বিস্তারিত মেসেজ লিখুন..."
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">টাইপ</label>
+                      <select 
+                        value={newNotice.type}
+                        onChange={(e) => setNewNotice({ ...newNotice, type: e.target.value })}
+                        className="input-field py-4 appearance-none"
+                      >
+                        <option value="info">তথ্য (Info)</option>
+                        <option value="warning">সতর্কবাণী (Warning)</option>
+                        <option value="success">সফলতা (Success)</option>
+                        <option value="error">ত্রুটি (Error)</option>
+                      </select>
+                    </div>
+                    <div className="flex items-end">
+                      <button type="submit" className="w-full py-4 bg-primary hover:bg-primary/90 text-white font-black rounded-xl transition-all shadow-xl shadow-primary/20">
+                        নোটিশ পাবলিশ করুন
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              </div>
+
+              {/* Notice List */}
+              <div className="space-y-6">
+                <h3 className="text-2xl font-black text-white tracking-tight">পূর্ববর্তী নোটিশসমূহ</h3>
+                <div className="grid gap-4">
+                  {notices.map((notif) => (
+                    <div key={notif.id} className="bg-white/[0.02] border border-white/5 p-6 rounded-2xl flex items-center justify-between group">
+                      <div className="flex items-center gap-6">
+                        <div className={cn(
+                          "w-12 h-12 rounded-xl flex items-center justify-center",
+                          notif.type === 'info' ? "bg-blue-500/10 text-blue-500" :
+                          notif.type === 'warning' ? "bg-amber-500/10 text-amber-500" :
+                          notif.type === 'success' ? "bg-green-500/10 text-green-500" :
+                          "bg-red-500/10 text-red-500"
+                        )}>
+                          <Bell size={24} />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-white text-lg">{notif.title}</h4>
+                          <p className="text-sm text-slate-400">{notif.message}</p>
+                          <p className="text-[10px] text-slate-600 font-bold uppercase tracking-widest mt-2">
+                            পাবলিশড: {format(new Date(notif.createdAt), 'd MMM, p', { locale: bn })}
+                          </p>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => handleDeleteNotice(notif.id)}
+                        className="p-3 bg-red-500/10 text-red-500 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500 hover:text-white"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </div>
