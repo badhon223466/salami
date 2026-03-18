@@ -73,19 +73,28 @@ const PublicProfile: React.FC = () => {
       };
 
       const removeListeners = () => {
-        document.removeEventListener('click', attemptPlay);
-        document.removeEventListener('touchstart', attemptPlay);
-        document.removeEventListener('keydown', attemptPlay);
+        const events = ['click', 'touchstart', 'keydown', 'mousedown', 'pointerdown', 'scroll'];
+        events.forEach(event => document.removeEventListener(event, attemptPlay));
       };
 
-      document.addEventListener('click', attemptPlay);
-      document.addEventListener('touchstart', attemptPlay);
-      document.addEventListener('keydown', attemptPlay);
+      const events = ['click', 'touchstart', 'keydown', 'mousedown', 'pointerdown', 'scroll'];
+      events.forEach(event => document.addEventListener(event, attemptPlay));
 
-      // Try playing immediately (might work if user already interacted with the site elsewhere)
+      // Handle tab visibility change
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === 'visible' && audio.paused && isMusicPlaying) {
+          attemptPlay();
+        }
+      };
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+
+      // Try playing immediately
       attemptPlay();
 
-      return () => removeListeners();
+      return () => {
+        removeListeners();
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      };
     }
   }, []);
 
